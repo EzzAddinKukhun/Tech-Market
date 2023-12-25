@@ -25,14 +25,16 @@ router.post("/signup", (req, res) => {
       isVerified = false,
     } = req.body;
 
-    connection.query("select email, username from users", (err, rows) => {
+    connection.query("select email, username from users", async (err, rows) => {
       const person = rows.find((person) => (email == person.email) || (username == person.username));
       if (person != undefined) return res.status(400).send({message: "There is an error in email or username, try to enter another one"}); 
+
+      const hashedPassword = await bcrypt.hash(password, 10); 
 
       const addNewUserStatement =
         "insert into users (`userId`,`firstName`,`midName`,`lastName`,`birthdate`,`phoneNumber`," +
         "`country`,`city`,`address`,`profilePhoto`,`username`,`password`,`email`,`bankId`,`creditCardNumber`,`isBlocked`,`isVerified`) VALUES (?)";
-        
+
       const values = [
         0,
         firstName,
@@ -45,7 +47,7 @@ router.post("/signup", (req, res) => {
         address,
         "",
         username,
-        password,
+        hashedPassword,
         email,
         0,
         0,
@@ -61,5 +63,7 @@ router.post("/signup", (req, res) => {
     res.status(500).send({ message: "There is an error!" });
   }
 });
+
+
 
 module.exports = router;
