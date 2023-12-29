@@ -64,6 +64,20 @@ router.post("/signup", (req, res) => {
   }
 });
 
+router.post ('/login', (req, res)=>{
+    try{
+        const {username, password} = req.body;
+        connection.query(`select username, password from users where username='${username}'`,  async (err, rows)=>{
+            if (rows.length == 0) return res.status(400).send({message: "This is an invalid username!"}); 
+            const isPasswordsMatched = await bcrypt.compare(password, rows[0].password);
+            isPasswordsMatched? res.status(200).send({message: 'success'}) : res.status(400).send({message: 'failed'})
+        });
+    }
+    catch (err) {
+        console.log (err)
+    }
+})
+
 
 
 module.exports = router;
