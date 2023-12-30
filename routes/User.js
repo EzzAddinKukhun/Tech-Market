@@ -1,8 +1,25 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
+const multer = require('multer'); 
+const path = require('path'); 
 const router = express.Router();
 const connection = require("../DbConnection");
 router.use(express.json());
+
+const storage = multer.diskStorage({
+    destination: (req, file, callback) => {
+        callback(null, 'PersonalImgs')
+    },   
+    filename: (req, file, callback)=>{
+        callback(null, file.fieldname + "_" + Date.now() + path.extname(file.originalname))
+
+    }
+})
+
+const upload = multer ({
+    storage: storage, 
+
+})
 
 router.post("/signup", (req, res) => {
   try {
@@ -76,8 +93,23 @@ router.post ('/login', (req, res)=>{
     catch (err) {
         console.log (err)
     }
-})
+}); 
 
+
+router.post ('/uploadPersonalPhoto', upload.single('personalImg'), (req, res)=> {
+    const userId = req.body.userId; 
+    const photoName = req.file.filename; 
+    const uploadProfilePhoto = `update users set profilePhoto ='${photoName}' where userId='${userId}'`
+    connection.query(uploadProfilePhoto, (err)=>{
+        try{
+            return res.status(200).send("success"); 
+
+        }
+        catch (err){
+            return res.status(500).send("failed"); 
+        }
+    })
+}); 
 
 
 module.exports = router;
