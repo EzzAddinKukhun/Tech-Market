@@ -2,6 +2,7 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const multer = require('multer'); 
 const path = require('path'); 
+const fs = require('fs');
 const router = express.Router();
 const connection = require("../DbConnection");
 router.use(express.json());
@@ -99,8 +100,14 @@ router.post ('/login', (req, res)=>{
 router.post ('/uploadPersonalPhoto', upload.single('personalImg'), (req, res)=> {
     const userId = req.body.userId; 
     const photoName = req.file.filename; 
-    const uploadProfilePhoto = `update users set profilePhoto ='${photoName}' where userId='${userId}'`
-    connection.query(uploadProfilePhoto, (err)=>{
+    const getProfilePhotoNameQuery = `select profilePhoto from users where userId='${userId}'`
+    connection.query(getProfilePhotoNameQuery , (err, rows)=>{
+        if (rows[0].profilePhoto != ""){
+            fs.unlinkSync(`./PersonalImgs/${rows[0].profilePhoto}`); 
+        }
+    })
+    const uploadProfilePhotoQuery = `update users set profilePhoto ='${photoName}' where userId='${userId}'`
+    connection.query(uploadProfilePhotoQuery, (err)=>{
         try{
             return res.status(200).send("success"); 
 

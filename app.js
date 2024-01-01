@@ -11,7 +11,7 @@ app.use("/ProfilePicture", express.static('PersonalImgs'));
 console.log (__dirname)
 
 app.listen (PORT, ()=>{
-    console.log ("server is running!")
+    console.log ("server is running!");
 }) 
 
 
