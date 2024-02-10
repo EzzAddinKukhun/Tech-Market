@@ -2,10 +2,13 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const multer = require('multer'); 
 const path = require('path'); 
+const randomstring = require('randomstring'); 
+const sendMail = require('../utils/sendEmail');
 const fs = require('fs');
-const router = express.Router();
+const userRouter = express.Router();
 const connection = require("../DbConnection");
-router.use(express.json());
+const { env } = require("process");
+userRouter.use(express.json());
 
 const storage = multer.diskStorage({
     destination: (req, file, callback) => {
@@ -22,7 +25,7 @@ const upload = multer ({
 
 })
 
-router.post("/signup", (req, res) => {
+userRouter.post("/signup", (req, res) => {
   try {
     const {
       firstName,
@@ -45,13 +48,14 @@ router.post("/signup", (req, res) => {
 
     connection.query("select email, username from users", async (err, rows) => {
       const person = rows.find((person) => (email == person.email) || (username == person.username));
+      console.log (person)
       if (person != undefined) return res.status(400).send({message: "There is an error in email or username, try to enter another one"}); 
 
       const hashedPassword = await bcrypt.hash(password, 10); 
 
       const addNewUserStatement =
         "insert into users (`userId`,`firstName`,`midName`,`lastName`,`birthdate`,`phoneNumber`," +
-        "`country`,`city`,`address`,`profilePhoto`,`username`,`password`,`email`,`bankId`,`creditCardNumber`,`isBlocked`,`isVerified`) VALUES (?)";
+        "`country`,`city`,`address`,`profilePhoto`,`username`,`password`,`email`,`bankId`,`creditCardNumber`,`isBlocked`,`token`,`isVerified`) VALUES (?)";
 
       const values = [
         0,
@@ -70,11 +74,20 @@ router.post("/signup", (req, res) => {
         0,
         0,
         false,
-        false,
+        "",
+        0,
       ];
       connection.query(addNewUserStatement, [values], (err) => {
         if (err) res.status(404).send({ message: "failed" });
-        else res.status(200).send({ message: "success" });
+        else {
+            console.log (process.env.BASE_URL)
+            const mailSubject = "Mail Verification!"; 
+            const randomToken = randomstring.generate(); 
+            const content = `<p> Hi ${firstName + lastName}, Please <a href="${process.env.BASE_URL}/mail-verification?token=${randomToken}">Verify</a> your mail! `
+            sendMail(email, mailSubject, content);
+            connection.query("UPDATE users set token=? where email=?", [randomToken, email])
+            res.status(200).send({ message: "success" });
+        }
       });
     });
   } catch (err) {
@@ -82,7 +95,7 @@ router.post("/signup", (req, res) => {
   }
 });
 
-router.post ('/login', (req, res)=>{
+userRouter.post ('/login', (req, res)=>{
     try{
         const {username, password} = req.body;
         connection.query(`select username, password from users where username='${username}'`,  async (err, rows)=>{
@@ -97,7 +110,7 @@ router.post ('/login', (req, res)=>{
 }); 
 
 
-router.post ('/uploadPersonalPhoto', upload.single('personalImg'), (req, res)=> {
+userRouter.post ('/uploadPersonalPhoto', upload.single('personalImg'), (req, res)=> {
     const userId = req.body.userId; 
     const photoName = req.file.filename; 
     const getProfilePhotoNameQuery = `select profilePhoto from users where userId='${userId}'`
@@ -110,7 +123,6 @@ router.post ('/uploadPersonalPhoto', upload.single('personalImg'), (req, res)=> 
     connection.query(uploadProfilePhotoQuery, (err)=>{
         try{
             return res.status(200).send("success"); 
-
         }
         catch (err){
             return res.status(500).send("failed"); 
@@ -118,5 +130,28 @@ router.post ('/uploadPersonalPhoto', upload.single('personalImg'), (req, res)=> 
     })
 }); 
 
+userRouter.get('/userInformation/:id', (req, res)=>{
+    const userId = req.params.id; 
+    const getUserInformationQuery = `select * from users where userId='${userId}'`;
+    connection.query(getUserInformationQuery , (err, rows)=>{
+        try{
+            if (rows.length == 0){
+                return res.status(400).send("This User Doesn't exist!"); 
+            }
+            else {
+                return res.status(200).send(rows[0]); 
+            }
+        }
+        catch (err){
+            return res.status(500).send("Error!"); 
+        }
+    })
+})
 
-module.exports = router;
+
+
+
+
+
+module.exports = userRouter;
+
