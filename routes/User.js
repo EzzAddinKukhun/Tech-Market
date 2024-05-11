@@ -22,15 +22,10 @@ const uploadProfilePhoto = multer({
 
 
 userRouter.post("/signup", userController.userSignUp);
-
 userRouter.post("/login", userController.userLogIn);
-
 userRouter.post("/uploadPersonalPhoto", uploadProfilePhoto.single("personalImg"), userController.uploadUserPersonalImg);
-
 userRouter.get("/userInformation/:id", userController.getUserInformation);
-
 userRouter.get("/forgetPassword", userController.forgotPassword);
-
 userRouter.post("/changePassword", userController.updatePassword)
 
 module.exports = userRouter;
