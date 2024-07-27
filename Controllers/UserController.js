@@ -14,32 +14,27 @@ const userSignUp = (req, res) => {
         firstName,
         midName,
         lastName,
-        birthdate,
+        birthDate,
         phoneNumber,
         country,
         city,
         address,
-        profilePhoto,
         username,
         password,
         email,
-        bankId = 0,
-        creditCardNumber = 0,
-        isBlocked = false,
-        isVerified = false,
       } = req.body;
   
-      connection.query("select email, username from users", async (err, rows) => {
+      connection.query("select email from users", async (err, rows) => {
         const person = rows.find(
-          (person) => email == person.email || username == person.username
+          (person) => email == person.email
         );
-        console.log(person);
-        if (person != undefined)
+        if (person != undefined){
+          console.log(person);
           return res.status(400).send({
             message:
-              "There is an error in email or username, try to enter another one",
+              "This Account has already registered!",
           });
-  
+        }
         const hashedPassword = await bcrypt.hash(password, 10);
   
         const addNewUserStatement =
@@ -51,7 +46,7 @@ const userSignUp = (req, res) => {
           firstName,
           midName,
           lastName,
-          birthdate,
+          birthDate,
           phoneNumber,
           country,
           city,
@@ -66,8 +61,9 @@ const userSignUp = (req, res) => {
           "",
           0,
         ];
+        console.log (values)
         connection.query(addNewUserStatement, [values], (err) => {
-          if (err) res.status(404).send({ message: "failed" });
+          if (err) {res.status(404).send({ message: "failed" });}
           else {
             const mailSubject = "Mail Verification!";
             const randomToken = randomstring.generate();
@@ -83,6 +79,8 @@ const userSignUp = (req, res) => {
           }
         });
       });
+
+
     } catch (err) {
       res.status(500).send({ message: "There is an error!" });
     }
@@ -93,12 +91,16 @@ const userLogIn = (req, res) => {
     try {
       const { username, password } = req.body;
       connection.query(
-        `select username, password from users where username='${username}'`,
+        `select * from users where username='${username}'`,
         async (err, rows) => {
-          if (rows.length == 0)
+          if (rows.length == 0){
             return res
-              .status(400)
-              .send({ message: "This is an invalid username!" });
+            .status(400)
+            .send({ message: "This is an invalid username!" });
+          }
+
+          if (!rows[0].isVerified){return res.status(500).send({message: "Account is not verified!"})}
+           
           const isPasswordsMatched = await bcrypt.compare(
             password,
             rows[0].password
